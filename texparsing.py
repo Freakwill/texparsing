@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-'''myfile.texfile1
 
-to process tex files
--------------------------------
-Path: mywork\myfile\texfile1.py
-Author: William/2015-07-27
+'''
+to parse tex files
 '''
 
 import basic
 from pyparsing import *
 from pyparsing_ext  import *
-# from myparsing import *
 
 WORD = Word(alphas)
 VARIABLE = Word(alphas,exact=1)
@@ -25,8 +21,8 @@ OPEN = Suppress('{')
 CLOSE = Suppress('}')
 NOBRACE = CharsNotIn('{}')
 CMDX = CMD('command_name') + ZeroOrMore(OPEN.suppress() + NOBRACE + CLOSE.suppress())
-BEGIN = ESC+Literal('begin')
-END = ESC+Literal('end')
+BEGIN = ESC + Literal('begin')
+END = ESC + Literal('end')
 SUB = Literal('_')
 SUP = Literal('^')
 AND = Literal('&')
@@ -42,85 +38,7 @@ NEWCMD = ESC + Literal('newcommand')
 TEXCOMMENT = Literal('%') + restOfLine
 PERCENT = ESC + Literal('%')
 CMDsf = Regex('(?<!\\\\)(?:\\\\\\\\)*([a-zA-Z]+)')
-ATOM = VARIABLE | DIGIT | CMD
 
-
-class Action:
-    # base class for action-classes
-    def __init__(self, tokens):
-        self.tokens=tokens
-
-    # basic methods
-    #def tostr(self):
-    #    return ' '.join(self.tokens)
-
-    def __len__(self):
-        return len(self.tokens)
-
-    def __eq__(self, other):
-        if isinstance(other, Action):
-            return self.tokens == other.tokens
-        else:
-            return self.tokens == other
-
-    def __repr__(self):
-        return ' '.join((map(str, self.tokens)))
-
-# operators
-class ActionOperator1(Action):
-    # action class for unary operator
-    def __init__(self, tokens):
-        super(ActionOperator1, self).__init__(tokens)
-        self.operand, self.op = tokens[0][0], tokens[0][-1]
-
-    def toTree(self):
-        return [self.op, self.operand.toTree()]
-
-    def __eq__(self, other):
-        return isinstance(other, ActionOperator1) and self.operand == other.operand and self.op == other.op
-
-
-        
-class ActionOperator2(Action):
-    # action class for binary operator
-    def __init__(self, tokens):
-        super(ActionOperator2, self).__init__(tokens)
-        self.op = tokens[0][1]
-        self.operands = tokens[0][0::2]
-
-    def toTree(self):
-        return [self.op, [operand.toTree() for operand in self.operands]]
-
-    def __eq__(self, other):
-        return isinstance(other, ActionOperator2) and self.operands == other.operands and self.op == other.op
-
-    def __len__(self):
-        return len(self.operands)
-
-
-class ActionFun(ActionOperator1):
-    # action for funcion
-    def __init__(self, tokens):
-        super(ActionFun, self).__init__(tokens)
-        self.function = tokens.function
-        self.args = tokens.args if 'args' in tokens else ()
-
-    def __repr__(self):
-        return "%s(%s)" %(self.function, str(self.operand))
-
-class ActionAssoc(ActionOperator2):
-
-    def __init__(self, tokens):
-        super(ActionAssoc, self).__init__(tokens)
-        self.op = ''
-        self.operands = tokens[0]
-
-class ActionAdd(ActionOperator2):
-
-    def __init__(self, tokens):
-        super(ActionAdd, self).__init__(tokens)
-        self.op = '+'
-        self.operands = tokens[0]
 
 
 def cmdx(cmd=WORD, *args):
@@ -141,7 +59,6 @@ def env(name=WORD):
     return BEGIN + OPEN + name + CLOSE + SkipTo('\\end') + END + OPEN + name + CLOSE
 
 
-
 math_expr = QuotedString('$', multiline=True)
 
 
@@ -152,60 +69,26 @@ filename = "test.tex"
         print(t)
 '''
 
-#for t, l, n in scanFile(CMDX, filename):
+#for t, l, n in parseFile(filename):
 #    print(t)
 
 
-# class ActionTexExps(Action):
-#     def __init__(self, tokens):
-#         super(ActionTexExps, self).__init__(tokens)
 
-#     def toTree(self):
-#         if len(self)==1:
-#             return self.tokens[0].toTree()
-#         else:
-#             return [token.toTree() for token in self.tokens]
+class ActionAtom(BaseAction):
+    def __init__(self, instring='', loc=0, tokens=[]):
+        super(ActionAtom, self).__init__(instring, loc, tokens)
+        self.content = tokens[0]
 
-#     def __repr__(self):
-#         if len(self)==1:
-#             return super(ActionTexExps, self).__repr__()
-#         else:
-#             return '\'('+super(ActionTexExps, self).__repr__()+')'
+    def toTree(self):
+        return self.content
 
-# class ActionBlock(Action):
-#     def __init__(self, tokens):
-#         super(ActionBlock, self).__init__(tokens)
-#         if self.isatom():
-#             self.atom=tokens[0]
-
-#     def isatom(self):
-#         return isinstance(self.tokens[0], ActionAtom)
-
-#     def toTree(self):
-#         return self.tokens[0].toTree()
-
-#     def __repr__(self):
-#         if self.isatom():
-#             return str(self.atom)
-#         else:
-#             return super(ActionBlock, self).__repr__()
+    def __repr__(self):
+        return self.content
 
 
-# class ActionAtom(Action):
-#     def __init__(self, tokens):
-#         super(ActionAtom, self).__init__(tokens)
-#         self.expr = tokens.arg
-
-#     def toTree(self):
-#         return self.expr
-
-#     def __repr__(self):
-#         return self.expr
-
-
-# class ActionCMDX(Action):
-#     def __init__(self, tokens):
-#         super(ActionCMDX, self).__init__(tokens)
+# class ActionCMDX(BaseAction):
+#     def __init__(self, instring='', loc=0, tokens=[]):
+#         super(ActionCMDX, self).__init__(tokens=tokens)
 #         self.command=tokens.command
 #         self.args=tokens[1:]
 
@@ -220,50 +103,20 @@ filename = "test.tex"
 
 #     def print_(self):
 #         pass
-        
 
 
-# CMD0=Suppress('\\')+oneOf('sin cos alpha beta gamma int sum prod subset approx infty')('command')
-# CMD1=Suppress('\\')+oneOf('bar sqrt tilde hat check dot ddot')('command')
-# CMD2=Suppress('\\')+oneOf('frac')('command')
-# printable = Word(alphanums+'+-=<>*/|(),.;:\'', exact=1)
-
-# TexExp = Forward()
-# TexExps = OneOrMore(TexExp).setParseAction(ActionTexExps)
-
-# atom = printable | CMD0
-# atom.setParseAction(ActionAtom)
-# block = (atom('arg') | OPEN + atom('arg') + CLOSE | OPEN + TexExps('arg') + CLOSE)
-# block.setParseAction(ActionBlock)
-# TexExp << (block | ( (SUB | SUP)('command') + block | CMD1 + block | CMD2 + (block + block)).setParseAction(ActionCMDX))
-# TexExps.setParseAction(ActionTexExp)
-
-
-#pr=TexExps.parseString('\\int_0^\infty f(x)dx\\approx\sum_{i=1}w_ie^{x_i}f(x_i)')
-#print(pr[0])
-
-
-class ActionIntExp(Action):
-
-    def __init__(self, tokens):
-        super(ActionIntExp, self).__init__(tokens)
-        self.op = 'int'
-        self.function = tokens.function
-        self.variable=tokens.variable
-        self.lower_bound=tokens.lower_bound
-        self.upper_bound=tokens.upper_bound
+class ActionIntExp(BaseAction):
+    names = ('integrated', 'variable', 'lower_bound', 'upper_bound')
+    op = 'int'
 
     def __repr__(self):
-        return '%s(%s, %s, %s, %s)'%(self.op, self.function, self.variable,self.lower_bound,self.upper_bound)
+        return '%s(%s, %s, %s, %s)'%(self.op, self.integrated, self.variable,self.lower_bound,self.upper_bound)
 
-class ActionSumExp(Action):
-
-    def __init__(self, tokens):
-        super(ActionSumExp, self).__init__(tokens)
-        self.op = 'sum'
-        self.item = tokens.item
-        self.index=tokens.index
-        self.lower_bound=tokens.lower_bound
+class ActionSumExp(BaseAction):
+    names = ('item', 'index', 'lower_bound', 'upper_bound')
+    op = 'sum'
+    def __init__(self, instring='', loc=0, tokens=[]):
+        super(ActionSumExp, self).__init__(instring, loc, tokens)
         if 'upper_bound' in tokens:
             self.upper_bound=tokens.upper_bound
         else:
@@ -272,84 +125,70 @@ class ActionSumExp(Action):
     def __repr__(self):
         return '%s(%s, %s, %s, %s)'%(self.op, self.item, self.index,self.lower_bound,self.upper_bound)
 
-class ActionFunExp(Action):
-
-    def __init__(self, tokens):
-        super(ActionFunExp, self).__init__(tokens)
-        self.function = tokens.function[0]
-        self.args=tokens.args
-
-    def __repr__(self):
-        return '%s(%s)'%(self.function, ', '.join(str(arg) for arg in self.args))
-
-class ActionMathExp(Action):
-
-    def __init__(self, tokens):
-        super(ActionMathExp, self).__init__(tokens)
-
-class ActionBlock(Action):
-
-    def __init__(self, tokens):
-        super(ActionBlock, self).__init__(tokens)
-        if isinstance(tokens.content, ActionBlock):
-            self.content = tokens.content.content
-        else:
-            self.content = tokens.content
-
-    def __repr__(self):
-        return str(self.content)
-
-class ActionCmdExp(Action):
-    def __init__(self, tokens):
-        super(ActionCmdExp, self).__init__(tokens)
-        self.command=tokens.command
-        self.args=tokens[1:]
+class ActionFunExp(BaseAction):
+    names = ('function', 'args')
 
     def arity(self):
         return len(self.args)
 
     def __repr__(self):
-        return '%s(%s)'%(self.command, ' '.join(str(arg) for arg in self.args))
+        return '%s(%s)'%(self.function, ', '.join(str(arg) for arg in self.args))
 
-class ActionMathEq(Action):
+class ActionMathExp(BaseAction):
+    pass
 
-    def __init__(self, tokens):
-        super(ActionMathEq, self).__init__(tokens)
-        self.lhs=tokens.lhs
-        self.rhs=tokens.rhs
-        self.sign=tokens.sign
+class ActionBlock(BaseAction):
+
+    names = ('block',)
+
+    def __repr__(self):
+        return str(self.block)
+
+class ActionCmdExp(BaseAction):
+    names = ('command', 'args', 'options')
+
+    def arity(self):
+        return len(self.args)
+
+    def __repr__(self):
+        return '%s[](%s)'%(self.command, ' '.join(map(str, self.options)), ' '.join(map(str, self.args)))
+
+class ActionMathEq(BaseAction):
+    names = ('lhs', 'rhs', 'sign')
 
     def __repr__(self):
         return '%s(%s, %s)'%(self.sign, self.lhs, self.rhs)
 
-CMD0=Suppress('\\')+oneOf('sin cos alpha beta gamma int sum prod subset approx infty')('command')
-CMD1=Suppress('\\')+oneOf('bar sqrt tilde hat check dot ddot')('command')
-CMD2=Suppress('\\')+oneOf('frac')('command')
+CMD0 = Suppress('\\') + oneOf('sin cos alpha beta gamma int sum prod subset approx infty')('command')
+CMD1 = Suppress('\\') + oneOf('bar sqrt tilde hat check dot ddot')('command')
+CMD2 = Suppress('\\') + oneOf('frac')('command')
 
-intcmd=Suppress('\\')+Literal('int')
-sumcmd=Suppress('\\')+Literal('sum')
-printable = Word(alphanums+'+-=<>*/|(),.;:\'', exact=1)
-MathExp=Forward()
+intcmd = Suppress('\\') + Literal('int')
+sumcmd = Suppress('\\') + Literal('sum')
+MathExp = Forward()
 VARIABLE = Word(alphas, exact=1)
-ATOM = VARIABLE | DIGIT | Suppress('\\')+oneOf('alpha beta gamma infty')
+ATOM = VARIABLE('content') | DIGIT('content') | Suppress('\\') + oneOf('alpha beta gamma infty')('content')
+ATOM.setParseAction(ActionAtom)
 FUNC = VARIABLE | CMD0
-FunExp = VARIABLE('function') + Suppress('(') + delimitedList(MathExp)('args') +Suppress(')') # | VARIABLE('args')
+FunExp = VARIABLE('function') + Suppress('(') + delimitedList(MathExp)('args') + Suppress(')') # | VARIABLE('args')
 FunExp.setParseAction(ActionFunExp)
-block = ((printable | CMD0)('content') | OPEN + MathExp('content') + CLOSE)
+block = ATOM('block') | CMD0('block') | OPEN + MathExp('block') + CLOSE
 block.setParseAction(ActionBlock)
-IntExp=intcmd.suppress() + ((SUB.suppress() + block('lower_bound')) & (SUP.suppress() + block('upper_bound'))) + FunExp('function') + Suppress('d') + VARIABLE('variable')
+IntExp = intcmd.suppress() + ((SUB.suppress() + block('lower_bound')) & (SUP.suppress() + block('upper_bound'))) + FunExp('integrated') + Suppress('d') + VARIABLE('variable')
 IntExp.setParseAction(ActionIntExp)
-SumExp=sumcmd.suppress() + ((SUB.suppress() + OPEN + VARIABLE('index') + '='+ MathExp('lower_bound') +CLOSE) & Optional(SUP.suppress() + block('upper_bound'))) + restOfLine('item') #+ MathExp('item')
+SumExp = sumcmd.suppress() + ((SUB.suppress() + OPEN + VARIABLE('index') + '='+ MathExp('lower_bound') +CLOSE) & Optional(SUP.suppress() + block('upper_bound'))) + restOfLine('item') #+ MathExp('item')
 SumExp.setParseAction(ActionSumExp)
-CmdExp= (SUB | SUP)('command') + block('args') | CMD1 + block('args') | CMD2 + (block + block)('args')
+CmdExp = (SUB | SUP)('command') + block('args') | CMD1 + block('args') | CMD2 + (block + block)('args')
 CmdExp.setParseAction(ActionCmdExp)
 MathExp << ATOM | '('+ MathExp +')' | FunExp | IntExp | SumExp | CmdExp | OneOrMore(MathExp)
 MathExp.setParseAction(ActionMathExp)
-MathEq = IntExp('lhs') + (oneOf('= < >') | Suppress('\\') + oneOf('leq geq approx'))('sign') + SumExp('rhs')
+MathEq = IntExp('lhs') + (oneOf('= < >')('sign') | Suppress('\\') + oneOf('leq geq approx')('sign')) + SumExp('rhs')
 MathEq.setParseAction(ActionMathEq)
 
 
-# test
-pr=MathEq.parseString('\\int_0^\\infty f(x) d x\\approx\\sum_{i=1}w_ie^{x_i}f(x_i)')
+if __name__ == '__main__':
+    
+    pr = MathEq.parseString('\\int_0^\\infty f(x) d x\\approx\\sum_{i=1}w_ie^{x_i}f(x_i)')
+    print(pr[0])
 
-print(pr)
+
