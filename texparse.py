@@ -1,4 +1,12 @@
 # -*- coding: utf-8 -*-
+
+'''
+Example:
+>>> pr = mathEq.parseString('\\int_0^\\infty f(x) d x\\approx\\sum_{i=1}w_ie^{x_i}f(x_i)')
+>>> print(pr)
+[approx(int(f(x), x, 0, infty), sum(*(w_i, ^(e, x_i), f(x_i)), i, 1, infty))]
+'''
+
 from pyparsing import *
 from pyparsing_ext import *
 
@@ -257,6 +265,7 @@ if __name__ == "__main__":
     try:
         pr = mathEq.parseString('\\int_0^\\infty f(x) d x\\approx\\sum_{i=1}w_ie^{x_i}f(x_i)')
         print(pr)
+        # [approx(int(f(x), x, 0, infty), sum(*(w_i, ^(e, x_i), f(x_i)), i, 1, infty))]
     except pp.ParseException as pe:
         print(pp.ParseException.explain(pe))
 
